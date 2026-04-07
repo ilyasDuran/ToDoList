@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Minimal To-Do</title>
+    <title>Görevlerim</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root {
-            --bg: #fdfdfd;
-            --accent: #007AFF; /* Apple Mavisi */
+            --bg: #f8f9fa;
+            --accent: #007AFF;
             --text: #1c1c1e;
             --gray: #8e8e93;
+            --success: #34c759;
         }
 
         body {
@@ -20,65 +23,78 @@
             padding: 20px;
             display: flex;
             justify-content: center;
+            min-height: 100vh;
         }
 
         .app-container {
             width: 100%;
             max-width: 450px;
-            margin-top: 40px;
+            margin-top: 20px;
         }
 
-        h1 { font-size: 28px; font-weight: 700; margin-bottom: 30px; letter-spacing: -0.5px; }
+        h1 { font-size: 32px; font-weight: 800; margin-bottom: 25px; letter-spacing: -1px; color: var(--text); }
 
         #todo-list { list-style: none; padding: 0; margin: 0; }
 
         .todo-item {
             background: white;
-            padding: 18px;
-            border-radius: 16px;
-            margin-bottom: 12px;
+            padding: 20px;
+            border-radius: 18px;
+            margin-bottom: 15px;
             display: flex;
             align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-            border: 1px solid rgba(0,0,0,0.03);
-            animation: slideIn 0.4s ease-out forwards;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(0,0,0,0.02);
+            animation: slideIn 0.5s ease-out forwards;
+            cursor: pointer;
         }
 
         @keyframes slideIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: scale(0.9) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
-        .todo-item:active { transform: scale(0.97); background: #f2f2f7; }
+        .todo-item:active { transform: scale(0.95); background: #f2f2f7; }
 
-        .todo-text { flex-grow: 1; font-size: 16px; font-weight: 500; }
+        .todo-text { flex-grow: 1; font-size: 17px; font-weight: 500; }
 
-        /* Sağ alt Artı Butonu */
+        /* Artı Butonu (FAB) */
         .add-btn {
             position: fixed;
-            bottom: 40px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
-            background-color: var(--accent);
+            bottom: 30px;
+            right: 25px;
+            width: 65px;
+            height: 65px;
+            background: var(--accent);
             color: white;
-            border-radius: 30px;
+            border-radius: 50%;
             border: none;
-            font-size: 30px;
-            box-shadow: 0 8px 20px rgba(0, 122, 255, 0.3);
+            font-size: 35px;
+            box-shadow: 0 10px 25px rgba(0, 122, 255, 0.4);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 100;
+            transition: transform 0.2s;
+            z-index: 1000;
         }
+
+        .add-btn:active { transform: scale(0.9) rotate(90deg); }
 
         .loading-spinner {
             text-align: center;
             color: var(--gray);
-            font-size: 14px;
-            margin-top: 20px;
+            font-size: 15px;
+            margin-top: 50px;
+        }
+
+        /* Boş Liste Mesajı */
+        .empty-state {
+            text-align: center;
+            color: var(--gray);
+            margin-top: 100px;
+            font-style: italic;
         }
     </style>
 </head>
@@ -86,16 +102,16 @@
 
 <div class="app-container">
     <h1>Yapılacaklar</h1>
-    <div id="status" class="loading-spinner">Yükleniyor...</div>
+    <div id="status" class="loading-spinner">Veriler senkronize ediliyor...</div>
     <ul id="todo-list"></ul>
 </div>
 
 <button class="add-btn" onclick="addTask()">+</button>
 
 <script>
-    // BURAYA GOOGLE'DAN ALDIĞIN URL'Yİ YAPIŞTIR
-    const API_URL = 'https://script.google.com/macros/s/AKfycbwHRqn50Gc-0t0z_Qul1mDE1vwu47k1uPJa7JCaKJqVzFRIXBAQP8dbij0mtUxOGxQdEA/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbztLyqjZ_0oylWtDzl8vCSQ8ifaF2j_XHxCz8nXdntGK5g-i1DvdPKH3-R0CpkU2p0qug/exec';
 
+    // 1. Verileri Google'dan Çek
     async function getTasks() {
         try {
             const res = await fetch(API_URL);
@@ -104,62 +120,118 @@
             list.innerHTML = '';
             document.getElementById('status').style.display = 'none';
             
+            if (data.length === 0) {
+                list.innerHTML = '<div class="empty-state">Harika! Tüm işler bitti.</div>';
+                return;
+            }
+
             data.forEach(item => {
                 const li = document.createElement('li');
                 li.className = 'todo-item';
                 li.innerHTML = `<span class="todo-text">${item.task}</span>`;
-                li.ondblclick = () => completeTask(item.row, li);
+                li.addEventListener('dblclick', () => completeTask(item.row, li));
+                
+                // Mobil için uzun dokunma desteği (opsiyonel)
+                let timer;
+                li.addEventListener('touchstart', () => {
+                    timer = setTimeout(() => completeTask(item.row, li), 800);
+                });
+                li.addEventListener('touchend', () => clearTimeout(timer));
+
                 list.appendChild(li);
             });
         } catch (err) {
-            document.getElementById('status').innerText = "Hata oluştu!";
+            document.getElementById('status').innerText = "Bağlantı hatası!";
         }
     }
 
+    // 2. Yeni Görev Ekleme (SweetAlert2)
     async function addTask() {
-        const val = prompt("Ne yapacaksın?");
-        if (!val) return;
-
-        // Arayüzde hemen göster (İyimser güncelleme)
-        const list = document.getElementById('todo-list');
-        const tempLi = document.createElement('li');
-        tempLi.className = 'todo-item';
-        tempLi.style.opacity = "0.5";
-        tempLi.innerHTML = `<span class="todo-text">${val}...</span>`;
-        list.appendChild(tempLi);
-
-        await fetch(API_URL, {
-            method: 'POST',
-            mode: 'no-cors', // CORS sorunlarını aşmak için
-            body: JSON.stringify({ action: 'add', task: val })
+        const { value: task } = await Swal.fire({
+            title: 'Yeni Görev',
+            input: 'text',
+            inputPlaceholder: 'Ne yapman gerekiyor?',
+            showCancelButton: true,
+            confirmButtonText: 'Ekle',
+            cancelButtonText: 'İptal',
+            confirmButtonColor: '#007AFF',
+            inputAttributes: { 'autocapitalize': 'off', 'autocorrect': 'off' }
         });
-        
-        setTimeout(getTasks, 1000); // Tabloya yazılması için kısa bir bekleme
+
+        if (task) {
+            // İyimser güncelleme (Arayüzde hemen göster)
+            Swal.fire({
+                title: 'Kaydediliyor...',
+                timer: 1000,
+                timerProgressBar: true,
+                didOpen: () => { Swal.showLoading() }
+            });
+
+            await fetch(API_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ action: 'add', task: task })
+            });
+            
+            // Başarı mesajı (Toast stili)
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
+            });
+            Toast.fire({ icon: 'success', title: 'Görev listeye eklendi!' });
+            
+            setTimeout(getTasks, 1500);
+        }
     }
 
+    // 3. Görevi Tamamlama (SweetAlert2)
     async function completeTask(row, element) {
-        element.style.transform = "translateX(100px)";
-        element.style.opacity = "0";
-        
-        await fetch(API_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            body: JSON.stringify({ action: 'complete', row: row })
+        const result = await Swal.fire({
+            title: 'Tamamlandı mı?',
+            text: "Bu görevi yapıldı olarak işaretliyorsun.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#34c759',
+            cancelButtonColor: '#8e8e93',
+            confirmButtonText: 'Evet, bitti!',
+            cancelButtonText: 'Hayır'
         });
 
-        setTimeout(() => element.remove(), 300);
+        if (result.isConfirmed) {
+            element.style.transform = "translateX(100%)";
+            element.style.opacity = "0";
+
+            await fetch(API_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify({ action: 'complete', row: row })
+            });
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Başardın!',
+                text: 'Görev başarıyla tamamlandı.',
+                timer: 1500,
+                showConfirmButton: false
+            });
+
+            setTimeout(() => element.remove(), 400);
+        }
+    }
+
+    // 4. Service Worker Kaydı (PWA)
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').catch(err => console.log(err));
+        });
     }
 
     window.onload = getTasks;
-    
-    // Service Worker Kaydı
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('./sw.js')
-                .then(reg => console.log('Service Worker kayıtlı!', reg))
-                .catch(err => console.log('Kayıt başarısız!', err));
-        });
-    }
 </script>
 
 </body>
