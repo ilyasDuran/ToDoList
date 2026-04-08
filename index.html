@@ -3,6 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Görevlerim">
+    
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="icon-192.png">
+    
+    <link rel="icon" type="image/png" href="icon-192.png">
     <title>Görevlerim</title>
     <link rel="manifest" href="manifest.json">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -109,6 +119,43 @@
 <button class="add-btn" onclick="addTask()">+</button>
 
 <script>
+    window.addEventListener('load', () => {
+        // Uygulama zaten "standalone" (yüklü) modda açılmışsa hiçbir şey yapma
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+        
+        if (!isStandalone) {
+            const lastPrompt = localStorage.getItem('installPromptLastShown');
+            const now = new Date().getTime();
+            const oneDay = 24 * 60 * 60 * 1000; // 24 saat
+    
+            // Eğer daha önce hiç gösterilmediyse veya üzerinden 24 saat geçtiyse göster
+            if (!lastPrompt || (now - lastPrompt) > oneDay) {
+                setTimeout(() => {
+                    Swal.fire({
+                        title: 'Uygulama Olarak Kullan',
+                        text: 'Hızlı erişim için bu listeyi ana ekranına eklemek ister misin?',
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonText: 'Nasıl Yapılır?',
+                        cancelButtonText: 'Sonra',
+                        confirmButtonColor: '#007AFF'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                            if (isIOS) {
+                                Swal.fire('iOS Talimatı', 'Safari alt menüsündeki "Paylaş" butonuna basın ve "Ana Ekrana Ekle"yi seçin.', 'info');
+                            } else {
+                                Swal.fire('Android Talimatı', 'Tarayıcı menüsündeki (üç nokta) "Uygulamayı Yükle" veya "Ana Ekrana Ekle" seçeneğine dokunun.', 'info');
+                            }
+                        }
+                    });
+                    localStorage.setItem('installPromptLastShown', now);
+                }, 3000); // Sayfa açıldıktan 3 saniye sonra göster
+            }
+        }
+    });
+
+    
     const API_URL = 'https://script.google.com/macros/s/AKfycbztLyqjZ_0oylWtDzl8vCSQ8ifaF2j_XHxCz8nXdntGK5g-i1DvdPKH3-R0CpkU2p0qug/exec';
 
     // 1. Verileri Google'dan Çek
