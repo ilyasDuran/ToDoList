@@ -1,5 +1,5 @@
 /* Service Worker: todo-app-v1.0 */
-const CACHE_NAME = 'todo-app-v1.0'; // Uygulamada büyük bir görsel değişiklik yaparsan v1.1 yap!
+const CACHE_NAME = 'todo-app-v1.1'; // Uygulamada büyük bir görsel değişiklik yaparsan v1.1 yap!
 const urlsToCache = [
   './',
   './index.html',
